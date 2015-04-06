@@ -1,3 +1,4 @@
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE LambdaCase #-}
 
 module Data.Logic.Boolean where
@@ -74,4 +75,12 @@ instance
   ) => Boolean (r,s,t,u,v) where
   tt = ( tt , tt , tt , tt , tt )
   ff = ( ff , ff , ff , ff , ff )
+
+data AnyBoolean = AnyBoolean
+ { getBoolean :: forall r. Boolean r => r
+ }
+
+instance Boolean AnyBoolean where
+  tt = AnyBoolean tt
+  ff = AnyBoolean ff
 

@@ -1,3 +1,5 @@
+{-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE ConstraintKinds #-}
@@ -35,9 +37,9 @@ cond t f a = if' a t f
 cond_ :: Decidable_ r => a -> a -> r -> a
 cond_ t f = runIdentity . cond t f
 
-(.?.) :: Decidable_ r => a -> a -> r -> a
-(.?.) = cond_
-infix 5 .?.
+(?) :: Decidable_ r => a -> a -> r -> a
+(?) = cond_
+infix 5 ?
 
 -- }}}
 

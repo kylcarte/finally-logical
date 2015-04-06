@@ -46,14 +46,23 @@ place2 op p q = embedCxt $ op <&> lower p <&> lower q
 place2_ :: Contextual r s => (r -> r -> r) -> s -> s -> s
 place2_ = place2 . pure
 
-distrib :: Contextual r s => Context s (r -> r -> r) -> s -> s -> s
-distrib op p q = embedCxt $ op <*> lowerCxt p <*> lowerCxt q
+distrib1 :: Contextual r s => Context s (r -> r) -> s -> s
+distrib1 op p = embedCxt $ op <*> lowerCxt p
 
-distrib_ :: Contextual r s => (r -> r -> r) -> s -> s -> s
-distrib_ = distrib . pure
+distrib1_ :: Contextual r s => (r -> r) -> s -> s
+distrib1_ = distrib1 . pure
+
+distrib2 :: Contextual r s => Context s (r -> r -> r) -> s -> s -> s
+distrib2 op p q = embedCxt $ op <*> lowerCxt p <*> lowerCxt q
+
+distrib2_ :: Contextual r s => (r -> r -> r) -> s -> s -> s
+distrib2_ = distrib2 . pure
 
 mapCxt :: (Contextual r s, Contextual t u) => (Context s r -> Context u t) -> s -> u
-mapCxt f p = embedCxt $ f $ lowerCxt p
+mapCxt f = embedCxt . f . lowerCxt
+
+mapLower :: (Contextual r s, Contextual t u, Context s ~ Context u) => (r -> t) -> s -> u
+mapLower f = embedCxt . fmap f . lowerCxt
 
 {-
 usingCxt2 :: Contextual r s => (r -> Context s r) -> s -> s -> s

@@ -1,3 +1,4 @@
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ConstraintKinds #-}
@@ -11,60 +12,57 @@ module Data.Logic.Propositional
   , module Data.Logic.Propositional.Class
   ) where
 
-import Data.Logic.Atomic
-import Data.Logic.Boolean
 import Data.Logic.Propositional.Class
 import Data.Logic.Decidable
+
+import Test.QuickCheck (Arbitrary(..),oneof)
 
 import Control.Applicative
 
 data Prop r
   = Prop r
-  | TT
-  | FF
-  | Not  (Prop r)
+  | Neg  (Prop r)
   | Prop r :&: Prop r
   | Prop r :|: Prop r
   deriving (Eq,Ord,Show)
 infixr 3 :&:
 infixr 2 :|:
 
+instance Arbitrary r => Arbitrary (Prop r) where
+  arbitrary = oneof
+    [ Prop  <$> arbitrary
+    , Neg   <$> arbitrary
+    , (:&:) <$> arbitrary <*> arbitrary
+    , (:|:) <$> arbitrary <*> arbitrary
+    ]
+  shrink = \case
+    Prop _  -> []
+    Neg  p  -> [p]   ++ [ Neg q   | q <- shrink p ]
+    p :|: q -> [p,q] ++ [ r :|: s | r <- shrink p, s <- shrink q ]
+    p :&: q -> [p,q] ++ [ r :&: s | r <- shrink p, s <- shrink q ]
+
 instance Propositional (Prop r) where
-  neg   = \case
-    Not p -> p
-    TT    -> FF
-    FF    -> TT
-    p     -> Not p
-  p .|. q = case (p,q) of
-    (TT,_ ) -> TT
-    (_ ,TT) -> TT
-    (FF,_ ) -> q
-    (_ ,FF) -> p
-    _       -> p :|: q
-  p .&. q = case (p,q) of
-    (FF,_ ) -> FF
-    (_ ,FF) -> FF
-    (TT,_ ) -> q
-    (_ ,TT) -> p
-    _       -> p :&: q
-
-instance Boolean (Prop r) where
-  tt = TT
-  ff = FF
-
-instance Atomic a r => Atomic a (Prop r) where
-  atom = Prop . atom
+  neg   = Neg
+  (.|.) = (:|:)
+  (.&.) = (:&:)
 
 instance Decidable r => Decidable (Prop r) where
   type Decide (Prop r) = Decide r
   truth = \case
     Prop p   -> truth p
-    TT       -> pure True
-    FF       -> pure False
-    Not  p   -> fmap not $ truth p
+    Neg  p   -> fmap not $ truth p
     p :|: q -> (||) <$> truth p <*> truth q
     p :&: q -> (&&) <$> truth p <*> truth q
 
-test' :: Prop (Atom String) -> IO ()
-test' = print
+data AnyProp = AnyProp
+  { getProp :: forall r. Propositional r => r
+  }
+
+instance Propositional AnyProp where
+  neg p    = AnyProp $ neg $ getProp p
+  p .|. q  = AnyProp $ getProp p .|.  getProp q
+  p .&. q  = AnyProp $ getProp p .&.  getProp q
+  p .^. q  = AnyProp $ getProp p .^.  getProp q
+  p .->. q = AnyProp $ getProp p .->. getProp q
+  p .==. q = AnyProp $ getProp p .==. getProp q
 
