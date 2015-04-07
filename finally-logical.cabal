@@ -10,7 +10,9 @@ cabal-version:       >=1.10
 
 library
   exposed-modules:     Data.Logic.Atomic
+                       Data.Logic.Atomic.Class
                        Data.Logic.Boolean
+                       Data.Logic.Boolean.Class
                        Data.Logic.Decidable
                        Data.Logic.Embed
                        Data.Logic.Modal
@@ -26,6 +28,8 @@ library
   build-depends:       base >=4.7 && <4.8
                      , containers
                      , transformers
+                     , mtl
                      , QuickCheck
   hs-source-dirs:      src
+  ghc-options:         -Wall
   default-language:    Haskell2010

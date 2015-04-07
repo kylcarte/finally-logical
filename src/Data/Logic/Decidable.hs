@@ -7,8 +7,6 @@
 
 module Data.Logic.Decidable where
 
-import Data.Logic.Atomic
-
 import Control.Applicative
 import Data.Functor.Identity
 import Data.Functor.Compose
@@ -62,10 +60,6 @@ defTruthConj' r s = (&&) <$> truth r <*> truth s
 
 instance Decidable Bool where
   truth = pure
-
-instance Decidable (Atom a) where
-  type Decide (Atom a) = ((->) (a -> Bool))
-  truth (Atom a) pr = pr a
 
 instance Decidable r => Decidable (Identity r) where
   type Decide (Identity r) = Decide r

@@ -5,9 +5,16 @@
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE FunctionalDependencies #-}
 
-module Data.Logic.Embed where
+module Data.Logic.Embed
+  ( module Data.Logic.Embed
+  , module Data.Functor.Compose
+  ) where
 
 import Control.Applicative
+import Data.Functor.Compose
+
+type (:.:) = Compose
+infixr 4 :.:
 
 class Embed r s | s -> r where
   lower :: s -> r
@@ -35,25 +42,25 @@ class (Embed r s, Applicative (Context s)) => Contextual r s | s -> r where
   lowerCxt :: s -> Context s r
 
 place1 :: Contextual r s => Context s (r -> r) -> s -> s
-place1 op p = embedCxt $ op <&> lower p
+place1 f p = embedCxt $ f <&> lower p
 
 place1_ :: Contextual r s => (r -> r) -> s -> s
 place1_ = place1 . pure
 
 place2 :: Contextual r s => Context s (r -> r -> r) -> s -> s -> s
-place2 op p q = embedCxt $ op <&> lower p <&> lower q
+place2 f p q = embedCxt $ f <&> lower p <&> lower q
 
 place2_ :: Contextual r s => (r -> r -> r) -> s -> s -> s
 place2_ = place2 . pure
 
 distrib1 :: Contextual r s => Context s (r -> r) -> s -> s
-distrib1 op p = embedCxt $ op <*> lowerCxt p
+distrib1 f p = embedCxt $ f <*> lowerCxt p
 
 distrib1_ :: Contextual r s => (r -> r) -> s -> s
 distrib1_ = distrib1 . pure
 
 distrib2 :: Contextual r s => Context s (r -> r -> r) -> s -> s -> s
-distrib2 op p q = embedCxt $ op <*> lowerCxt p <*> lowerCxt q
+distrib2 f p q = embedCxt $ f <*> lowerCxt p <*> lowerCxt q
 
 distrib2_ :: Contextual r s => (r -> r -> r) -> s -> s -> s
 distrib2_ = distrib2 . pure
@@ -64,10 +71,23 @@ mapCxt f = embedCxt . f . lowerCxt
 mapLower :: (Contextual r s, Contextual t u, Context s ~ Context u) => (r -> t) -> s -> u
 mapLower f = embedCxt . fmap f . lowerCxt
 
-{-
-usingCxt2 :: Contextual r s => (r -> Context s r) -> s -> s -> s
-usingCxt2 f p q = 
--}
+apCxt :: Contextual r s => (r -> Context s (r -> r)) -> s -> s -> s
+apCxt f p q = embedCxt $ f (lower q) <*> lowerCxt p
+
+-- blarg
+chainCxtR :: (Contextual r s, Context s ~ (->) t)
+  => (r -> t) -> s -> s -> s
+chainCxtR f p q = embedCxt $ lowerCxt p . f . lowerCxt q
+
+chainCxtL :: (Contextual r s, Context s ~ (->) t)
+  => (r -> t) -> s -> s -> s
+chainCxtL f p q = embedCxt $ lowerCxt q . f . lowerCxt p
+
+apChainCxtR :: (Contextual r s, Context s ~ (->) (f r), Applicative f) => s -> s -> s
+apChainCxtR = chainCxtR pure
+
+apChainCxtL :: (Contextual r s, Context s ~ (->) (f r), Applicative f) => s -> s -> s
+apChainCxtL = chainCxtL pure
 
 (<&>) :: Functor f => f (a -> b) -> a -> f b
 mf <&> a = fmap ($ a) mf

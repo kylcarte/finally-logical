@@ -3,8 +3,8 @@
 
 module Data.Logic.Render where
 
-import Data.Logic.Atomic
-import Data.Logic.Boolean
+import Data.Logic.Atomic.Class
+import Data.Logic.Boolean.Class
 import Data.Logic.Embed
 import Data.Logic.Propositional.Class
 import Data.Logic.Modal.Class
@@ -20,6 +20,9 @@ instance Embed Render Render where
 instance EmbedStar Render Render where
   lowerStar = id
   embedStar = id
+
+renderIO :: Render -> IO ()
+renderIO = putStrLn . render
 
 render :: Render -> String
 render = ($ "") . renders
