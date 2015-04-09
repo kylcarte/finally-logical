@@ -1,9 +1,11 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
 
 module Data.Logic.Boolean.Class where
 
 import Control.Applicative
 import Data.Functor.Identity
+import Data.Functor.Compose
 
 class Boolean r where
   tt :: r
@@ -28,6 +30,10 @@ instance Boolean Bool where
 instance Boolean r => Boolean (Identity r) where
   tt = pure tt
   ff = pure ff
+
+instance Boolean (f (g r)) => Boolean (Compose f g r) where
+  tt = Compose tt
+  ff = Compose ff
 
 instance Boolean r => Boolean (Maybe r) where
   tt = pure tt

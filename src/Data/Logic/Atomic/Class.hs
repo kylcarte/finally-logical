@@ -6,6 +6,7 @@
 module Data.Logic.Atomic.Class where
 
 import Data.Functor.Identity
+import Data.Functor.Compose
 
 class Atomic a r | r -> a where
   atom   :: a -> r
@@ -22,8 +23,14 @@ instance Atomic a (AnyAtomic a) where
 instance Atomic Bool Bool where
   atom = id
 
+instance Atomic String String where
+  atom = id
+
 instance Atomic a r => Atomic a (Identity r) where
   atom = return . atom
+
+instance Atomic a (f (g r)) => Atomic a (Compose f g r) where
+  atom = Compose . atom
 
 instance Atomic a r => Atomic a (Maybe r) where
   atom = return . atom

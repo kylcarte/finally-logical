@@ -1,20 +1,8 @@
-{-
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE LambdaCase #-}
--}
 
 module Data.Logic.Propositional.Class where
 
-import Control.Applicative
-import Data.Functor.Identity
+import Data.Logic.Util
 
 class Propositional r where
   neg    :: r -> r
@@ -81,12 +69,20 @@ instance Propositional Bool where
   (.&.) = (&&)
 
 instance Propositional r => Propositional (Identity r) where
-  neg   = defNeg1
-  (.|.) = defDisj1
+  neg    = defNeg1
+  (.|.)  = defDisj1
   (.^.)  = defExDisj1
   (.&.)  = defConj1
   (.->.) = defImpl1
   (.==.) = defEqv1
+
+instance Propositional (f (g r)) => Propositional (Compose f g r) where
+  neg    = Compose . neg . getCompose
+  (.|.)  = Compose .: (.|.)  `on` getCompose
+  (.&.)  = Compose .: (.&.)  `on` getCompose
+  (.^.)  = Compose .: (.^.)  `on` getCompose
+  (.->.) = Compose .: (.->.) `on` getCompose
+  (.==.) = Compose .: (.==.) `on` getCompose
 
 instance Propositional r => Propositional (Maybe r) where
   neg    = defNeg1

@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleInstances #-}
 
@@ -8,10 +9,14 @@ import Data.Logic.Boolean.Class
 import Data.Logic.Embed
 import Data.Logic.Propositional.Class
 import Data.Logic.Modal.Class
+import Data.Logic.Util
 
 newtype Render = Render
   { rendersPrec :: Int -> ShowS
   }
+
+instance Show Render where
+  showsPrec d = flip rendersPrec d
 
 instance Embed Render Render where
   lower = id
@@ -20,6 +25,18 @@ instance Embed Render Render where
 instance EmbedStar Render Render where
   lowerStar = id
   embedStar = id
+
+instance Contextual Render Render where
+  type Context Render = Identity
+  lowerCxt = Identity
+  embedCxt = runIdentity
+
+instance ContextStar Render Render where
+  type AllContext Render = Identity
+  lowerCxtStar = lowerCxt
+  embedCxtStar = embedCxt
+
+-- Util Ops {{{
 
 renderIO :: Render -> IO ()
 renderIO = putStrLn . render
@@ -36,6 +53,7 @@ renderString s = Render $ \_ -> showString s
 renderChar :: Char -> Render
 renderChar c = Render $ \_ -> showChar c
 
+-- }}}
 
 instance Atomic String Render where
   atom   = renderString
@@ -69,11 +87,11 @@ instance Propositional Render where
     . showString " ⇔ "
     . rendersPrec q 1
 
-instance Modal Render where
-  square p = Render $ \d -> showParen (d > 10)
-    $ showString "◻ "
+instance IsMode m => Modal m Render where
+  square m p = Render $ \d -> showParen (d > 10)
+    $ showsSquare m
     . rendersPrec p 11
-  diamond p = Render $ \d -> showParen (d > 10)
-    $ showString "⋄ "
+  diamond m p = Render $ \d -> showParen (d > 10)
+    $ showsDiamond m
     . rendersPrec p 11
 

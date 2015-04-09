@@ -16,12 +16,12 @@ import Data.Logic.Embed
 import Data.Logic.Propositional.Class
 import Data.Logic.Modal.Class
 import Data.Logic.Render
+import Data.Logic.Util
 
 import Test.QuickCheck (CoArbitrary(..), Arbitrary(..))
 
-import Control.Applicative
-
-type StrProp r = (Atomic String r, Propositional r)
+type StrProp r   = (Atomic String r, Propositional r)
+type StrMode m r = (Atomic String r, Modal m r)
 
 -- PushNeg {{{
 
@@ -40,14 +40,15 @@ instance Propositional r => Embed r (PushNeg r) where
   embed p = PushNeg $ neg p ? p
   lower p = pushNeg p False
 
-instance (Propositional r, EmbedStar a r) => EmbedStar a (PushNeg r) where
-  embedStar = embed . embedStar
-  lowerStar = lowerStar . lower
+instance (Propositional r, EmbedStar a r) => EmbedStar a (PushNeg r)
 
-instance Propositional r => Contextual r (PushNeg r) where
+instance Contextual r (PushNeg r) where
   type Context (PushNeg r) = (->) Bool
   embedCxt = PushNeg
   lowerCxt = pushNeg
+
+instance ContextStar a r => ContextStar a (PushNeg r) where
+  type AllContext (PushNeg r) = Compose (Context (PushNeg r)) (AllContext r)
 
 instance (Atomic a r, Propositional r) => Atomic a (PushNeg r) where
   atom = embed . atom
@@ -58,13 +59,13 @@ instance (Boolean r, Propositional r) => Boolean (PushNeg r) where
 
 instance Propositional r => Propositional (PushNeg r) where
   neg   = mapCxt (. not)
-  (.|.) = distrib2 $ (.&.) ? (.|.)
-  (.&.) = distrib2 $ (.|.) ? (.&.)
-  (.^.) = distrib2_ (.^.)
+  (.|.) = distribCxt2 $ (.&.) ? (.|.)
+  (.&.) = distribCxt2 $ (.|.) ? (.&.)
+  (.^.) = distribCxt2_  (.^.)
 
-instance (Modal r, Propositional r) => Modal (PushNeg r) where
-  square  = distrib1 $ diamond ? square
-  diamond = distrib1 $ square  ? diamond
+instance (Modal m r, Propositional r) => Modal m (PushNeg r) where
+  square  m = distribCxt1 $ diamond m ? square  m
+  diamond m = distribCxt1 $ square  m ? diamond m
 
 -- }}}
 
@@ -84,14 +85,15 @@ instance Propositional r => Embed r (PushDisj r) where
   embed p = PushDisj $ maybe p (p .|.)
   lower p = pushDisj p Nothing
 
-instance (Propositional r, EmbedStar a r) => EmbedStar a (PushDisj r) where
-  embedStar = embed . embedStar
-  lowerStar = lowerStar . lower
+instance (Propositional r, EmbedStar a r) => EmbedStar a (PushDisj r)
 
-instance Propositional r => Contextual r (PushDisj r) where
+instance Contextual r (PushDisj r) where
   type Context (PushDisj r) = (->) (Maybe r)
   embedCxt = PushDisj
   lowerCxt = pushDisj
+
+instance ContextStar a r => ContextStar a (PushDisj r) where
+  type AllContext (PushDisj r) = Compose (Context (PushDisj r)) (AllContext r)
 
 instance (Atomic a r, Propositional r) => Atomic a (PushDisj r) where
   atom = embed . atom
@@ -101,9 +103,13 @@ instance (Boolean r, Propositional r) => Boolean (PushDisj r) where
   ff = embed ff
 
 instance Propositional r => Propositional (PushDisj r) where
-  neg   = place1_ neg
+  neg   = placeCxt1_ neg
   (.|.) = apChainCxtR
-  (.&.) = distrib2_ (.&.)
+  (.&.) = distribCxt2_ (.&.)
+
+instance (Modal m r, Propositional r) => Modal m (PushDisj r) where
+  square  = placeCxt1_ . square
+  diamond = placeCxt1_ . diamond
 
 -- }}}
 
@@ -123,14 +129,15 @@ instance Propositional r => Embed r (PushConj r) where
   embed p = PushConj $ maybe p (p .&.)
   lower p = pushConj p Nothing
 
-instance (Propositional r, EmbedStar a r) => EmbedStar a (PushConj r) where
-  embedStar = embed . embedStar
-  lowerStar = lowerStar . lower
+instance (Propositional r, EmbedStar a r) => EmbedStar a (PushConj r)
 
-instance Propositional r => Contextual r (PushConj r) where
+instance Contextual r (PushConj r) where
   type Context (PushConj r) = (->) (Maybe r)
   embedCxt = PushConj
   lowerCxt = pushConj
+
+instance ContextStar a r => ContextStar a (PushConj r) where
+  type AllContext (PushConj r) = Compose (Context (PushConj r)) (AllContext r)
 
 instance (Atomic a r, Propositional r) => Atomic a (PushConj r) where
   atom = embed . atom
@@ -140,9 +147,13 @@ instance (Boolean r, Propositional r) => Boolean (PushConj r) where
   ff = embed ff
 
 instance Propositional r => Propositional (PushConj r) where
-  neg   = place1_ neg
+  neg   = placeCxt1_ neg
   (.|.) = apChainCxtR
-  (.&.) = distrib2_ (.&.)
+  (.&.) = distribCxt2_ (.&.)
+
+instance (Modal m r, Propositional r) => Modal m (PushConj r) where
+  square  = placeCxt1_ . square
+  diamond = placeCxt1_ . diamond
 
 -- }}}
 
@@ -163,4 +174,7 @@ p4 = ((atom "A" .|. atom "B") .|. atom "C") .|. ((atom "D" .|. atom "E") .|. ato
 
 testProp :: PushNeg (PushDisj (PushConj Render)) -> IO ()
 testProp = renderIO . pushConj_ . pushDisj_ . pushNeg_
+
+m0 :: StrMode Alethic r => r
+m0 = neg $ nec $ atom "A"
 
